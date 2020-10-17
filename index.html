@@ -1,0 +1,397 @@
+
+<!doctype html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8">
+
+<title>Vexflow Testing</title>
+<meta name="description" content="The HTML5 Herald">
+<meta name="author" content="SitePoint">
+
+<link rel="stylesheet" href="css/style.css" />
+<link href="http://www.vexflow.com/vextab/tabdiv.css" media="screen" rel="Stylesheet" type="text/css" />
+<link href="http://www.vexflow.com/vextab/style.css" media="screen" rel="Stylesheet" type="text/css" />
+
+<!-- VexFlow Compiled Source -->
+<script src="js/vexflow-min.js"></script>
+<script src="js/vexflow-debug.js"></script>
+
+<script src="http://cdnjs.cloudflare.com/ajax/libs/lodash.js/2.4.1/lodash.js"></script>
+<script src="js/jquery-3.4.1.min.js"></script>
+<script src="http://www.vexflow.com/support/tabdiv-debug.js"></script>
+
+</head>
+
+
+
+
+<body>
+
+    <div>
+        <div class="score" id="score"></div>
+        <button id="btn_play" class="button">&#9658;</button>
+        <buttton id="btn_addNote" class="button">Add Note</buttton>
+        <button id="btn_reset" class="button">Reset Score</button>
+    </div>
+
+    <script>
+        var playbackState = 'paused';
+
+        // Basic setup boilerplate for using VexFlow with the SVG rendering context:
+        VF = Vex.Flow;
+
+        // Create an SVG renderer and attach it to the "score" DIV element
+        var scoreDiv = document.getElementById("score");
+        var renderer = new VF.Renderer(scoreDiv, VF.Renderer.Backends.SVG);
+
+        // Configure the rendering context
+        var context = renderer.getContext();
+        
+        // Create tick context
+        var tickContext = new VF.TickContext();
+
+        // Create a stave of width 10000 at position 10, 40 on the canvas.
+        var stave = new VF.Stave(10, 10, $(window).width()-50)
+        .addClef('treble');
+
+        // Connect it to the rendering context and draw!
+        stave.setContext(context).draw();
+
+        
+        // Connect it to the rendering context and draw!
+        stave.setContext(context).draw();
+        var noteX = 50;
+        var staveNoteIds = [];
+        
+        tickContext.preFormat().setX(noteX);
+
+        const visibleNoteGroups = [];
+
+        const svg = context.svg;
+        
+        // Scale svg to fill screen
+        function setScoreSize() {
+            svg.setAttribute("style", "height: " + $(window).height()+"px;");
+            svg.setAttribute("style", "width: " + $(window).width()+"px;");
+        }
+        setScoreSize();
+
+        function enableInteraction() {
+            console.log(svg)
+            var svgLines = svg.children;
+            for (var i=0; i<svgLines.length; i++){
+                svgLines[i].addEventListener('click', playNote());
+                svgLines[i].addEventListener('mouseover', colorDescendants('red'), false);
+                svgLines[i].addEventListener('mouseout', returnToDefault(), false);
+            }
+        }
+        enableInteraction();
+
+        function playNote() {
+            return function() {
+                // get all stavenote subelements
+                subStaveNotes = this.getElementsByClassName("vf-stavenote");
+                // check if object has soundfile attached
+                for (i=0; i<subStaveNotes.length; i++){
+                    console.log("Playing soundfile for " + subStaveNotes[i].note + ", duration: " + subStaveNotes[i].duration);
+                    new Audio("media/"+subStaveNotes[i].soundFile).play();
+                }
+            }
+        }
+
+        function colorDescendants(color) {
+            return function() {
+                // define array of all elements requiring format (this element + subelements)
+                allElements = [this].concat(Array.from(this.getElementsByTagName("*")));
+                //console.log(Array.from(this.getElementsByTagName("*")));
+
+                for (var i=0; i<allElements.length; i++) {
+                    // does existing element have fill properties? only change color if it exists already
+                    if (typeof $(allElements[i]).attr('fill') !== typeof undefined || $(allElements[i]).attr('fill') == false) {
+                        // does the default-fill property not exist already? only add default property if it doesn't exist already
+                        if (typeof $(allElements[i]).attr('default-fill') == typeof undefined || $(allElements[i]).attr('default-fill') == true) {
+                            // save default color
+                            allElements[i].setAttribute('default-fill',allElements[i].getAttribute("fill"));
+                        }
+                        // apply color
+                        allElements[i].setAttribute('fill',color);
+                    }
+
+                    
+                    // does existing element have stroke properties?
+                    if (typeof $(allElements[i]).attr('stroke') !== typeof undefined || $(allElements[i]).attr('stroke') == false) {
+                        // does the default-stroke property exist already?
+                        if (typeof $(allElements[i]).attr('default-stroke') == typeof undefined || $(allElements[i]).attr('default-stroke') == true) {
+                            // save default color
+                            allElements[i].setAttribute('default-stroke',allElements[i].getAttribute("stroke"));
+                        }
+                        // apply color
+                        allElements[i].setAttribute('stroke',color);
+                    }
+                }
+            };
+        }
+
+        function returnToDefault(color) {
+            return function() {
+                // define array of all elements requiring format (this element + subelements)
+                allElements = [this].concat(Array.from(this.getElementsByTagName("*")));
+
+                for (var i=0; i<allElements.length; i++) {
+                    // does existing element have fill properties?
+                    if (typeof $(allElements[i]).attr('fill') !== typeof undefined || $(allElements[i]).attr('fill') == false) {
+                        // does the default-fill property exist
+                        if (typeof $(allElements[i]).attr('default-fill') !== typeof undefined || $(allElements[i]).attr('default-fill') == false) {
+                            // return color to default
+                            allElements[i].setAttribute('fill',allElements[i].getAttribute('default-fill'));
+                        }
+                    }
+
+                    
+                    // does existing element have stroke properties?
+                    if (typeof $(allElements[i]).attr('stroke') !== typeof undefined || $(allElements[i]).attr('stroke') == false) {
+                        // does the default-stroke property exist
+                        if (typeof $(allElements[i]).attr('default-stroke') !== typeof undefined || $(allElements[i]).attr('default-stroke') == false) {
+                            // return color to default
+                            allElements[i].setAttribute('stroke',allElements[i].getAttribute("default-stroke"));
+                        }
+                    }
+                }
+            }
+        }
+
+
+        // define StaveNote object        
+        var durations = ['8', '4', '2'];
+        var notes = [
+            ['c', '', '4', '28'],
+            //['c', '#', '4', '29'],
+            //['d', '', '4', '30'],
+            ['e','b', '4', '31'],
+            //['e', '', '4', '32'],
+            ['f', '', '4', '33'],
+            ['f','#', '4', '34'],
+            ['g', '', '4', '35'],
+            //['a', '', '4', '37'],
+            ['b','b', '4', '38'],
+            //['b', '', '4', '39'],
+            ['c', '', '5', '40'],
+            //['d', '', '5', '42'],
+        ].map(([letter, acc, octave, noteNumber]) => {
+            const note = new VF.StaveNote({
+                clef: 'treble',
+                keys: [`${letter}${acc}/${octave}`],
+                duration: durations[Math.floor(Math.random()*durations.length)],
+            })
+            .setContext(context)
+            .setStave(stave);
+
+            // initialize tick context
+            tickContext.preFormat().setX(noteX);
+
+            // If a StaveNote has an accidental, we must render it manually.
+            // This is so that you get full control over whether to render
+            // an accidental depending on the musical context. Here, if we
+            // have one, we want to render it. (Theoretically, we might
+            // add logic to render a natural sign if we had the same letter
+            // name previously with an accidental. Or, perhaps every twelfth
+            // note or so we might render a natural sign randomly, just to be
+            // sure our user who's learning to read accidentals learns
+            // what the natural symbol means.)
+            if(acc) note.addAccidental(0, new VF.Accidental(acc));
+            tickContext.addTickable(note)
+            
+            // add soundfile reference
+            note.soundFile = noteNumber + '.mp3';
+
+            return note;
+        });
+
+        beatNo = 1;
+        musicPlayer = {};
+        function addNote() {
+            // pick random note from notes StaveNote object
+            note = notes[Math.floor(Math.random()*notes.length)];
+            // shift note x position by 40
+            deltaX = 10 + 80/note.duration;
+            noteX = noteX + deltaX;
+
+            if(!note) return;
+            const group = context.openGroup();
+            visibleNoteGroups.push(group);
+            note.draw();
+
+            // determine id of newly added note & add object information
+            $('.vf-stavenote').each(function () {
+                if (staveNoteIds.includes(this.id)==false) {
+                    this.note = note.keys;
+                    this.duration = note.duration;
+                    this.soundFile = note.soundFile;
+                    staveNoteIds.push(this.id);
+                }
+            });
+            // add to music player
+            musicPlayer[beatNo] = new Audio("media/"+note.soundFile);
+            // increment beat
+            beatNo = beatNo + 4/note.duration;
+            console.log(beatNo);
+            console.log(staveNoteIds);
+            
+            
+            context.closeGroup();
+            tickContext.preFormat().setX(noteX);
+            
+            //enable interaction on all generated svg objects
+            enableInteraction();
+        }
+
+        beat = 1;
+        metronome = new Audio("media/click.mp3");
+        function playNext() {     
+            console.log(beat);
+            metronome.play();
+
+            // use music player associative array
+            if (""+beat in musicPlayer) {
+                // play new audio
+                musicPlayer[""+beat].play();
+                console.log(musicPlayer);
+            }
+
+            // get all stavenotes
+            // allStaveNotes = document.getElementsByClassName("vf-stavenote");
+            // looping through SVG elements == INEFFICIENT
+            // for (i=0; i<allStaveNotes.length; i++){
+            //     if (allStaveNotes[i].beatNo == beat) {
+            //         console.log("Playing soundfile for " + allStaveNotes[i].note + ", duration: " + allStaveNotes[i].duration);
+            //         console.log("Beat No: " + allStaveNotes[i].beatNo);
+            //         new Audio("media/"+allStaveNotes[i].soundFile).play();
+            //     }
+            // }
+            beat = beat + 1/2;
+        }
+
+        function pausePlayback() {
+            // set status variable to paused
+            playbackState = "paused";
+            // stop audio
+            metronome.pause();
+            metronome.currentTime = 0;
+            // toggle button innerHTML
+            $("#btn_play").html("&#9658;");
+            // stop playback timer
+            clearInterval(playbackTimer);
+            // reset beat
+            beat = 1;
+        }
+
+        function beginPlayback() {
+            var bpm = 110;
+            // set status variable to playing
+            playbackState = "playing";
+            // create new metronome audio, enable looping & play audio
+            //metronome = new Audio("media/click_" + bpm + "bpm.mp3");
+            //metronome.loop = true;
+            //metronome.play();
+            // toggle button innerHTML
+            $("#btn_play").html(" | | ");
+            // start playback timer for every quaver
+            playbackTimer = setInterval(playNext, 60/bpm/2*1000);
+        }
+
+        function togglePlayback() {
+            if (playbackState == "paused") {
+                beginPlayback();
+            } else {
+                pausePlayback();
+            }
+        }
+        function resetScore() {
+            // clear div content
+            $("#score").empty();
+            pausePlayback();
+
+            // Create an SVG renderer and attach it to the "score" DIV element
+            scoreDiv = document.getElementById("score");
+            renderer = new VF.Renderer(scoreDiv, VF.Renderer.Backends.SVG);
+
+            // Configure the rendering context
+            context = renderer.getContext();
+            
+            // Create tick context
+            tickContext = new VF.TickContext();
+
+            // Create a stave of width 10000 at position 10, 40 on the canvas.
+            stave = new VF.Stave(10, 10, $(window).width()-50)
+            .addClef('treble');
+
+            // Connect it to the rendering context and draw!
+            stave.setContext(context).draw();
+
+            // Connect it to the rendering context and draw!
+            noteX = 50;
+            staveNoteIds = [];
+            
+            tickContext.preFormat().setX(noteX);
+
+            setScoreSize();
+            enableInteraction();
+
+            beatNo = 1;
+            beat = 1;
+            musicPlayer = {};
+
+            // define StaveNote object        
+            durations = ['8', '4', '2'];
+            notes = [
+                ['c', '', '4', '28'],
+                //['c', '#', '4', '29'],
+                ['d', '', '4', '30'],
+                ['e','b', '4', '31'],
+                ['e', '', '4', '32'],
+                ['f', '', '4', '33'],
+                ['f','#', '4', '34'],
+                ['g', '', '4', '35'],
+                //['a', '', '4', '37'],
+                ['b','b', '4', '38'],
+                ['b', '', '4', '39'],
+                ['c', '', '5', '40'],
+                ['d', '', '5', '42'],
+            ].map(([letter, acc, octave, noteNumber]) => {
+                const note = new VF.StaveNote({
+                    clef: 'treble',
+                    keys: [`${letter}${acc}/${octave}`],
+                    duration: durations[Math.floor(Math.random()*durations.length)],
+                })
+                .setContext(context)
+                .setStave(stave);
+
+                // initialize tick context
+                tickContext.preFormat().setX(noteX);
+
+                // If a StaveNote has an accidental, we must render it manually.
+                // This is so that you get full control over whether to render
+                // an accidental depending on the musical context. Here, if we
+                // have one, we want to render it. (Theoretically, we might
+                // add logic to render a natural sign if we had the same letter
+                // name previously with an accidental. Or, perhaps every twelfth
+                // note or so we might render a natural sign randomly, just to be
+                // sure our user who's learning to read accidentals learns
+                // what the natural symbol means.)
+                if(acc) note.addAccidental(0, new VF.Accidental(acc));
+                tickContext.addTickable(note)
+                
+                // add soundfile reference
+                note.soundFile = noteNumber + '.mp3';
+
+                return note;
+            });
+        }
+
+        $("#btn_addNote").click(addNote);
+        $("#btn_play").click(togglePlayback);
+        $("#btn_reset").click(resetScore);
+
+    </script>
+</html>
