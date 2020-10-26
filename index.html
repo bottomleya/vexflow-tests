@@ -31,7 +31,8 @@
     <div>
         <div class="score" id="score"></div>
         <button id="btn_play" class="button">&#9658;</button>
-        <buttton id="btn_addNote" class="button">Add Note</buttton>
+        <button id="btn_metronome" class="button">Click OFF</button>
+        <button id="btn_addNote" class="button">Add Note</button>
         <button id="btn_reset" class="button">Reset Score</button>
     </div>
 
@@ -167,17 +168,17 @@
         var notes = [
             ['c', '', '4', '28'],
             //['c', '#', '4', '29'],
-            //['d', '', '4', '30'],
-            ['e','b', '4', '31'],
-            //['e', '', '4', '32'],
+            ['d', '', '4', '30'],
+            //['e','b', '4', '31'],
+            ['e', '', '4', '32'],
             ['f', '', '4', '33'],
-            ['f','#', '4', '34'],
+            //['f','#', '4', '34'],
             ['g', '', '4', '35'],
-            //['a', '', '4', '37'],
-            ['b','b', '4', '38'],
-            //['b', '', '4', '39'],
+            ['a', '', '4', '37'],
+            //['b','b', '4', '38'],
+            ['b', '', '4', '39'],
             ['c', '', '5', '40'],
-            //['d', '', '5', '42'],
+            ['d', '', '5', '42'],
         ].map(([letter, acc, octave, noteNumber]) => {
             const note = new VF.StaveNote({
                 clef: 'treble',
@@ -208,6 +209,7 @@
             return note;
         });
 
+        metronomeStatus = "OFF";
         beatNo = 1;
         musicPlayer = {};
         function addNote() {
@@ -235,8 +237,6 @@
             musicPlayer[beatNo] = new Audio("media/"+note.soundFile);
             // increment beat
             beatNo = beatNo + 4/note.duration;
-            console.log(beatNo);
-            console.log(staveNoteIds);
             
             
             context.closeGroup();
@@ -250,7 +250,9 @@
         metronome = new Audio("media/click.mp3");
         function playNext() {     
             console.log(beat);
-            metronome.play();
+            if (metronomeStatus == "ON") {
+                metronome.play();
+            }
 
             // use music player associative array
             if (""+beat in musicPlayer) {
@@ -298,6 +300,17 @@
             $("#btn_play").html(" | | ");
             // start playback timer for every quaver
             playbackTimer = setInterval(playNext, 60/bpm/2*1000);
+        }
+
+        function toggleMetronome() {
+            console.log(metronomeStatus);
+            if (metronomeStatus == "ON") {
+                metronomeStatus = "OFF";
+                $("#btn_metronome").html("Click OFF");
+            } else {
+                metronomeStatus = "ON";
+                $("#btn_metronome").html("Click ON");
+            }
         }
 
         function togglePlayback() {
@@ -392,6 +405,7 @@
         $("#btn_addNote").click(addNote);
         $("#btn_play").click(togglePlayback);
         $("#btn_reset").click(resetScore);
+        $("#btn_metronome").click(toggleMetronome);
 
     </script>
 </html>
